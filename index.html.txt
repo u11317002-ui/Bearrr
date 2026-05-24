@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙語互動繪本 - 幫小熊買水果 (互動升級版)</title>
+    <style>
+        :root {
+            --primary-color: #ffb703;
+            --secondary-color: #fb8500;
+            --bg-color: #f8edeb;
+            --text-color: #333;
+            --leaf-green: #a7c957;
+            --sky-blue: #ade8f4;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden; /* 防止籃子移出時產生捲軸 */
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            font-size: 2rem;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .lang-switch {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .book-container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            border: 8px solid #ffddd2;
+            box-sizing: border-box; /* 確保 padding 不會影響整體寬度 */
+        }
+
+        /* 繪本文字內容 */
+        .story-text-container {
+            margin-bottom: 20px;
+            min-height: 100px;
+        }
+
+        .story-text {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .audio-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        /* 插圖與遊戲區放置區 (設定為相對定位以利內部元素絕對定位) */
+        .stage-area {
+            position: relative;
+            width: 100%;
+            height: 400px; /* 固定的遊戲高度 */
+            background-color: var(--sky-blue);
+            border-radius: 20px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden; /* 隱藏掉落的水果 */
+        }
+
+        /* 普通插圖 (Intro/Outro 頁) */
+        .page-illustration {
+            font-size: 10rem;
+            line-height: 400px; /* 垂直居中 */
+        }
+
+        /* 遊戲專用：果樹裝飾 */
+        .game-decor-tree {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 25rem;
+            color: var(--leaf-green);
+            z-index: 1;
+        }
+
+        /* 遊戲專用：可交互的水果 (絕對定位) */
+        .interactive-fruit {
+            position: absolute;
+            font-size: 4rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.1s ease; /* 輕微的縮放效果 */
+        }
+
+        .interactive-fruit:hover {
+            transform: scale(1.1);
+        }
+
+        /* 水果墜落動畫 */
+        @keyframes fall {
+            to { top: 380px; } /* 掉落到接近底部 */
+        }
+
+        .fruit-falling {
+            animation: fall 1.5s ease-in forwards;
+        }
+
+        /* 遊戲專用：籃子 (絕對定位) */
+        .basket {
+            position: absolute;
+            bottom: 10px;
+            width: 120px;
+            font-size: 5rem;
+            text-align: center;
+            z-index: 20;
+            left: 50%; /* 初始位置居中 */
+            transform: translateX(-50%);
+            cursor: ew-resize; /* 表示可以左右移動 */
+            pointer-events: auto; /* 確保滑鼠事件可以被偵測 */
+        }
+
+        /* 導覽按鈕 */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nav-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="main-title">🐻 幫小熊買水果</h1>
+        <button class="lang-switch" onclick="toggleLanguage()" id="lang-btn">English</button>
+    </header>
+
+    <div class="book-container">
+        <div class="story-text-container">
+            <p class="story-text">
+                <span id="story-content">小熊肚子餓了，想去市場買水果。我們一起出發吧！</span>
+                <button class="audio-btn" onclick="speakText()" title="播放語音">🔊</button>
+            </p>
+        </div>
+
+        <div class="stage-area" id="stage-area">
+            </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="nav-btn" id="prev-btn" onclick="changePage(-1)" disabled>上一頁 / Prev</button>
+        <button class="nav-btn" id="next-btn" onclick="changePage(1)">下一頁 / Next</button>
+    </div>
+
+    <script>
+        // 狀態管理
+        let currentLang = 'zh';
+        let currentPage = 0;
+        let isGameActive = false; // 是否正在遊戲關卡
+        let gameState = 'waiting'; // 'waiting', 'falling', 'caught'
+
+        // 核心資料集
+        const storyData = [
+            {
+                zh: "小熊肚子餓了，想去市場買水果。我們一起出發吧！",
+                en: "Little Bear is hungry and wants to buy some fruits at the market. Let's go together!",
+                illustration: "🐻🛒",
+                type: "intro"
+            },
+            {
+                zh: "小熊來到了蘋果樹下。小熊說：「我想買紅色的蘋果。」<br>我們來玩摘水果遊戲！用籃子接住掉下來的蘋果吧！",
+                en: "Little Bear arrives under an apple tree. He says, 'I want red apples.'<br>Let's play the Fruit Pick game! Catch the falling apples with your basket!",
+                type: "game",
+                target: "apple",
+                targetIcon: "🍎",
+                // 遊戲資料
+                gameSettings: {
+                    fruitOptions: [
+                        { id: "apple", icon: "🍎", count: 3 }, // 目標：3顆蘋果
+                        { id: "banana", icon: "🍌", count: 2 }, // 雜物：2根香蕉
+                    ],
+                    targetCount: 3
+                },
+                successZh: "太棒了！你幫小熊找到了多汁的蘋果！",
+                successEn: "Great job! You found the juicy apple for Little Bear!"
+            },
+            {
+                zh: "接著，小熊來到香蕉樹下。香蕉在哪裡呢？<br>用籃子把香蕉接住吧！",
+                en: "Next, Little Bear comes to a banana tree. Where are the bananas?<br>Catch them with the basket!",
+                type: "game",
+                target: "banana",
+                targetIcon: "🍌",
+                gameSettings: {
+                    fruitOptions: [
+                        { id: "banana", icon: "🍌", count: 3 },
+                        { id: "watermelon", icon: "🍉", count: 1 }, // 雜物：1個西瓜
+                    ],
+                    targetCount: 3
+                },
+                successZh: "答對了！香蕉甜甜的很好吃！",
+                successEn: "Correct! Bananas are sweet and delicious!"
+            },
+            {
+                zh: "最後，小熊想買一個大西瓜在夏天消暑。請指給牠看！<br>把落下的西瓜接住！",
+                en: "Finally, Little Bear wants a big watermelon to cool down in the summer. Please show him!<br>Catch the falling watermelon!",
+                type: "game",
+                target: "watermelon",
+                targetIcon: "🍉",
+                gameSettings: {
+                    fruitOptions: [
+                        { id: "watermelon", icon: "🍉", count: 1 },
+                        { id: "grape", icon: "🍇", count: 2 }, // 雜物
+                    ],
+                    targetCount: 1
+                },
+                successZh: "太厲害了！西瓜看起來真消暑！",
+                successEn: "Amazing! The watermelon looks so refreshing!"
+            },
+            {
+                zh: "謝謝你的幫忙！小熊買到了所有想吃的水果，現在高興地回家囉！",
+                en: "Thank you for your help! Little Bear bought all the fruits he wanted and is happily heading home now!",
+                illustration: "🐻🥰🍓🍎🍌🍉",
+                type: "outro"
+            }
+        ];
+
+        // 渲染頁面
+        function renderPage() {
+            const page = storyData[currentPage];
+            
+            // 更新文字 (支援 <br> 換行)
+            document.getElementById('story-content').innerHTML = page[currentLang];
+            
+            // 重設導覽按鈕
+            document.getElementById('prev-btn').disabled = (currentPage === 0 || isGameActive && gameState === 'falling');
+            document.getElementById('next-btn').disabled = (currentPage === storyData.length - 1 || (page.type === 'game' && gameState !== 'caught'));
+
+            // 重設舞台
+            const stage = document.getElementById('stage-area');
+            stage.innerHTML = '';
+            isGameActive = false;
+            gameState = 'waiting';
+
+            // 根據頁面類型生成舞台內容
+            if (page.type === 'game') {
+                isGameActive = true;
+                initGameStage(page);
+            } else {
+                // 普通插圖頁面
+                const ill = document.createElement('div');
+                ill.className = 'page-illustration';
+                ill.innerText = page.illustration;
+                stage.appendChild(ill);
+            }
+        }
+
+        // --- 遊戲邏輯實作區 ---
+
+        function initGameStage(page) {
+            const stage = document.getElementById('stage-area');
+            
+            // 1. 添加背景樹 (裝飾用)
+            const tree = document.createElement('div');
+            tree.className = 'game-decor-tree';
+            tree.innerText = '🌳';
+            stage.appendChild(tree);
+
+            // 2. 添加籃子
+            const basket = document.createElement('div');
+            basket.id = 'basket';
+            basket.className = 'basket';
+            basket.innerText = '🧺';
+            stage.appendChild(basket);
+
+            // 啟動籃子移動監聽
+            initBasketControl();
+
+            // 3. 散布水果 (在樹枝範圍內)
+            const settings = page.gameSettings;
+            let targetCollected = 0; // 當前關卡接到的目標數量
+
+            settings.fruitOptions.forEach(fruitOpt => {
+                for (let i = 0; i < fruitOpt.count; i++) {
+                    const fruit = document.createElement('div');
+                    fruit.className = 'interactive-fruit';
+                    fruit.innerText = fruitOpt.icon;
+                    fruit.dataset.type = fruitOpt.id; // 記錄水果類型
+                    
+                    // 隨機擺放位置 (大約在樹冠區域)
+                    const posX = 15 + (Math.random() * 70); // 15% - 85% 寬度
+                    const posY = 50 + (Math.random() * 100); // 50px - 150px 高度
+                    fruit.style.left = `${posX}%`;
+                    fruit.style.top = `${posY}px`;
+
+                    // 點擊事件
+                    fruit.onclick = () => startFruitFall(fruit, page, () => {
+                        targetCollected++;
+                        if (targetCollected >= settings.targetCount) {
+                            endLevel(page);
+                        }
+                    });
+
+                    stage.appendChild(fruit);
+                }
+            });
+        }
+
+        // 啟動籃子控制 (支援滑鼠與觸控)
+        function initBasketControl() {
+            const stage = document.getElementById('stage-area');
+            const basket = document.getElementById('basket');
+            
+            function moveBasket(clientX) {
+                const stageRect = stage.getBoundingClientRect();
+                const relativeX = clientX - stageRect.left;
+                
+                // 限制籃子移動在舞台範圍內
+                let newX = relativeX - (basket.offsetWidth / 2); // 居中滑鼠
+                if (newX < 0) newX = 0;
+                if (newX > stage.offsetWidth - basket.offsetWidth) newX = stage.offsetWidth - basket.offsetWidth;
+                
+                basket.style.left = `${newX}px`;
+                basket.style.transform = 'none'; // 移除 CSS 的居中變形
+            }
+
+            // 滑鼠移動
+            stage.addEventListener('mousemove', (e) => {
+                if (isGameActive) moveBasket(e.clientX);
+            });
+
+            // 觸控移動 (手機)
+            stage.addEventListener('touchmove', (e) => {
+                if (isGameActive) {
+                    // e.preventDefault(); // 防止頁面捲動，但有時會導致無法換頁
+                    moveBasket(e.touches[0].clientX);
+                }
+            }, { passive: false });
+        }
+
+        // 開始水果墜落
+        function startFruitFall(fruit, page, onCaughtCallback) {
+            if (gameState === 'falling' || gameState === 'caught') return; // 一次只掉一個
+
+            gameState = 'falling';
+            fruit.classList.add('fruit-falling'); // 加入動畫 CSS
+            document.getElementById('prev-btn').disabled = true; // 墜落時禁止上一頁
+            
+            // 語音播放 (唸出水果名稱)
+            speakFruitName(fruit.innerText);
+
+            // 碰撞偵測定時器
+            const checkCollisionInterval = setInterval(() => {
+                if (checkBasketCollision(fruit)) {
+                    clearInterval(checkCollisionInterval); // 停止偵測
+                    
+                    // 檢查是否為正確目標
+                    if (fruit.dataset.type === page.target) {
+                        alert(currentLang === 'zh' ? "🎉 接到了！" : "🎉 Caught it!");
+                        onCaughtCallback(); // 增加目標計數
+                    } else {
+                        alert(currentLang === 'zh' ? "❌ 這不是我們要買的..." : "❌ This is not the right one...");
+                    }
+                    
+                    fruit.remove(); // 移除水果
+                    gameState = 'waiting'; // 重設狀態
+                    document.getElementById('prev-btn').disabled = false; // 恢復上一頁按鈕
+                }
+            }, 100); // 每 0.1 秒檢查一次
+
+            // 動態結束後的清理 (如果沒接到掉出螢幕)
+            fruit.addEventListener('animationend', () => {
+                clearInterval(checkCollisionInterval); // 停止偵測
+                if (fruit.parentNode) {
+                    alert(currentLang === 'zh' ? "💦 水果掉地上了，再試一次！" : "💦 Ouch, it fell! Try again!");
+                    fruit.remove();
+                    // 重新放回一顆（如果需要），這裡為了展示簡單不重複生成
+                    gameState = 'waiting';
+                    document.getElementById('prev-btn').disabled = false;
+                }
+            });
+        }
+
+        // 偵測籃子與水果的碰撞
+        function checkBasketCollision(fruit) {
+            const basket = document.getElementById('basket');
+            
+            // 水果與籃子的 DOM 高度/寬度資料
+            const fRect = fruit.getBoundingClientRect();
+            const bRect = basket.getBoundingClientRect();
+
+            // 簡單的軸向對齊碰撞 (AABB)
+            const isColliding = (
+                fRect.bottom > bRect.top + (bRect.height * 0.3) && // 水果到底部 (但進入籃子一半以上)
+                fRect.top < bRect.bottom &&
+                fRect.right > bRect.left &&
+                fRect.left < bRect.right
+            );
+            
+            return isColliding;
+        }
+
+        // 通關
+        function endLevel(page) {
+            gameState = 'caught'; // 設定為通關狀態
+            document.getElementById('story-content').innerText = page[`success${currentLang.charAt(0).toUpperCase() + currentLang.slice(1)}`];
+            document.getElementById('next-btn').disabled = false; // 恢復「下一頁」
+        }
+
+        // --- 核心控制區 ---
+
+        // 切換中英文
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            document.getElementById('lang-btn').innerText = currentLang === 'zh' ? 'English' : '繁體中文';
+            document.getElementById('main-title').innerText = currentLang === 'zh' ? '🐻 幫小熊買水果' : '🐻 Help Little Bear';
+            renderPage();
+        }
+
+        // 上下頁
+        function changePage(direction) {
+            currentPage += direction;
+            if (currentPage < 0) currentPage = 0;
+            if (currentPage >= storyData.length) currentPage = storyData.length - 1;
+            renderPage();
+        }
+
+        // 語音朗讀故事
+        function speakText() {
+            const text = document.getElementById('story-content').innerText;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang === 'zh' ? 'zh-TW' : 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        // 語音：水果名稱 (遊戲中)
+        function speakFruitName(fruitIcon) {
+            // 從水果 Emoji 轉換為名稱 (為簡單起見直接對應)
+            let fruitName = '';
+            if (currentLang === 'zh') {
+                if (fruitIcon === '🍎') fruitName = '蘋果';
+                if (fruitIcon === '🍌') fruitName = '香蕉';
+                if (fruitIcon === '🍉') fruitName = '西瓜';
+            } else {
+                if (fruitIcon === '🍎') fruitName = 'Apple';
+                if (fruitIcon === '🍌') fruitName = 'Banana';
+                if (fruitIcon === '🍉') fruitName = 'Watermelon';
+            }
+            if (!fruitName) return;
+            const utterance = new SpeechSynthesisUtterance(fruitName);
+            utterance.lang = currentLang === 'zh' ? 'zh-TW' : 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 初始化
+        renderPage();
+    </script>
+</body>
+</html>
